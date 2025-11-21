@@ -1,0 +1,35 @@
+{
+  "project_profile": [
+    "Harmonic Radial Dial playground (ApparatusCircleGenerator → WavyCircleEditor) built with React 19 + Vite. Root App now renders `src/radial/ApparatusCircleGenerator` so the radial experience shares the `src/index.css` design-system utilities and the atom primitives in `src/components/atoms`."
+  ],
+  "active_objectives": [],
+  "implementation_notes": [
+    "App entry point is `src/App.jsx`, which now renders `src/radial/ApparatusCircleGenerator`. The `src/radial/apparatus` folder holds WavyCircleEditor/Controls/Canvas plus the custom hook that drives the radial experience.",
+    "Design-system tokens live in `src/index.css` (surface/fg/container utilities plus typography helpers) and are consumed by the radial UI via classes such as `bg-auto`, `bg-fg-02`, and `text-auto`.",
+    "Shared primitives live under `src/components/atoms`. WavyCircleControls imports { Button, Slider, ToggleBracket, ToggleCheckbox } from there, eliminating the dependency on `@kol/ui` that the copied files originally required.",
+    "Icons remain under `src/components/icons/svg` and are loaded via `src/components/icons/Icon.jsx` using Vite's `import.meta.glob` API.",
+    "Dependencies trimmed to React + ReactDOM; Vite's manualChunks now only bundles `vendor-react` so the build and install surface are lightweight.",
+    "Imported `SketchPicker` from the `react-color` package so the radial controls can show a toggled spectrum-only popover for Path Color that hides the hex/RGB inputs via forced CSS.",
+    "WavyCircleCanvas now tracks pan with inertia using mouse drag (skipping node/handle drags), requires holding Space to drag (with modifier-state fallback on the click), and applies the resulting offset inside the SVG transforms so the axes/canvas feel draggable.",
+    "Amplitude is now bipolar (slider range -50 to 50) so the inverse amplitude control actually mirrors the radial pattern when the value flips sign."
+  ],
+  "decision_log": [
+    "2025-11-21: Added `react-color` as a dependency so `SketchPicker` can be imported into the radial controls for future color work.",
+    "2025-11-21: Pivoted the root App to render `src/radial/ApparatusCircleGenerator`, reusing the design system in `src/index.css` and treating the Harmonic Radial Dial as the primary experience.",
+    "2025-11-21: Removed the old Kolkrabbi pages, organisms, constants, and utilities, kept only the atoms needed by `src/radial`, pruned dependencies down to React/ReactDOM, and narrowed Vite’s manual chunk config to `vendor-react` so the lightweight build now succeeds.",
+    "2025-11-21: Constrained the radial layout to available height by giving `WavyCircleEditor`/`WavyCircleCanvas` `h-full` and `flex-1` wrappers and dropping the `min-h-dvh` requirement.",
+    "2025-11-21: Added `control-heading`/`control-label` utilities in `src/index.css` and applied them across `WavyCircleControls`, creating consistent typography for every panel heading and label.",
+    "2025-11-21: Implemented three fill types (solid, gradient, image) with ColorPicker dropdown, gradient direction handles on canvas, and Pixi filter support for image fills. See docs/llm-context-protocol/session-logs/2025-11-21-fill-types-sessionlog.md",
+    "2025-01-20: Integrated 51 image filters (13 Konva + 38 Pixi.js WebGL). Added pixi.js and pixi-filters dependencies. Created src/utils/pixiFilters.js for WebGL pipeline. Fixed filter state management bug. Redesigned filter UI to flat design. Added displacement presets. See docs/llm-context-protocol/session-logs/2025-01-20-pixi-filters-sessionlog.md",
+    "2025-11-20: Fixed drag-and-drop reordering - Switched from nested SortableContext to single flat context with index-based position detection (standard dnd-kit pattern). Fixed frameId overwrite bug. Unified top-level list (objects + canvases). See docs/llm-context-protocol/session-logs/2025-11-20-dnd-reordering-sessionlog.md",
+    "2025-11-18: Phase 5 Integration complete - Renamed KonvaLayerEditor → KolEditor, integrated all 5 organisms. Atomic design refactor complete.",
+    "2025-11-18: Built complete atomic design component library (16 components) with interactive showcase pages at /components routes.",
+    "2025-11-18: Moved icons from public/icons to src/components/icons/svg for bundling with Vite; updated Icon.jsx to use import.meta.glob.",
+    "2025-11-17: Added docs/llm-context-protocol/protocol.md and llm-rules.md for LLM collaboration workflow."
+  ],
+  "communication_style": [
+    "User writes casually, expects concise responses. Prefers to be asked questions before making changes. Values focused, incremental work without unsolicited additions.",
+    "User handles dev servers - assistant should not start servers unless absolutely necessary for testing, and must kill immediately after."
+  ],
+  "experiments": []
+}
