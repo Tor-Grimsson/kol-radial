@@ -11,7 +11,9 @@
     "Dependencies trimmed to React + ReactDOM; Vite's manualChunks now only bundles `vendor-react` so the build and install surface are lightweight.",
     "Imported `SketchPicker` from the `react-color` package so the radial controls can show a toggled spectrum-only popover for Path Color that hides the hex/RGB inputs via forced CSS.",
     "WavyCircleCanvas now tracks pan with inertia using mouse drag (skipping node/handle drags), requires holding Space to drag (with modifier-state fallback on the click), and applies the resulting offset inside the SVG transforms so the axes/canvas feel draggable.",
-    "Amplitude is now bipolar (slider range -50 to 50) so the inverse amplitude control actually mirrors the radial pattern when the value flips sign."
+    "Amplitude is now bipolar (slider range -50 to 50) so the inverse amplitude control actually mirrors the radial pattern when the value flips sign.",
+    "Base shape selection seeds the generator with polygon/star geometry (starting with a four-pointed star) so the wavy path truly begins from the named contour.",
+    "Wave controls now expose manual number inputs for radius, amplitude, and frequency so users can exceed the slider limits without changing the slider bounds."
   ],
   "decision_log": [
     "2025-11-21: Added `react-color` as a dependency so `SketchPicker` can be imported into the radial controls for future color work.",
