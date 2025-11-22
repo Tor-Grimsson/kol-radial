@@ -29,11 +29,24 @@ const Slider = ({
   displayWidth = 10,
   fontSize,
   step = 1,
-  formatValue
+  formatValue,
+  animateState = 'none', // 'none', 'inactive', 'active'
+  onToggleAnimate = null,
+  animateIntensity = 0
 }) => {
   const handleChange = (e) => {
     if (onChange) {
       onChange(Number(e.target.value))
+    }
+  }
+
+  const handleInputChange = (e) => {
+    const newValue = e.target.value
+    if (newValue === '' || newValue === '-') return
+    const numValue = Number(newValue)
+    if (isNaN(numValue)) return
+    if (onChange) {
+      onChange(numValue)
     }
   }
 
@@ -54,11 +67,25 @@ const Slider = ({
     return Math.round(value)
   }, [decimals, formatValue, value])
 
+  const dotColor = animateState === 'active'
+    ? `rgba(234, 179, 8, ${0.4 + animateIntensity * 0.6})` // yellow with intensity
+    : animateState === 'inactive'
+    ? 'rgba(255, 255, 255, 0.5)' // white when added but not animating
+    : 'rgba(255, 255, 255, 0.3)' // dim white by default
+
   return (
     <div className={`${variantClass} gap-3 ${className}`}>
       {label && (
-        <label className="kol-mono-xs whitespace-nowrap shrink-0 w-fit" style={fontSize ? { fontSize } : undefined}>
+        <label className="kol-mono-xs whitespace-nowrap shrink-0 w-fit flex items-center gap-2" style={fontSize ? { fontSize } : undefined}>
           {label}
+          {onToggleAnimate && (
+            <button
+              type="button"
+              onClick={onToggleAnimate}
+              className="w-2 h-2 rounded-full transition-all cursor-pointer border-none p-0"
+              style={{ backgroundColor: dotColor }}
+            />
+          )}
         </label>
       )}
       <input
@@ -70,9 +97,13 @@ const Slider = ({
         onChange={handleChange}
         className="slider-black flex-1 w-full cursor-pointer"
       />
-      <span className="kol-mono-xs text-right shrink-0 w-fit" style={fontSize ? { fontSize } : undefined}>
-        {displayValue}
-      </span>
+      <input
+        type="number"
+        value={value}
+        onChange={handleInputChange}
+        className="w-[40px] px-2 py-1 rounded border border-auto kol-mono-text text-[11px] text-center hide-number-spinners shrink-0"
+        style={fontSize ? { fontSize } : undefined}
+      />
     </div>
   )
 }

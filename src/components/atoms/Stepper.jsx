@@ -8,8 +8,11 @@ const Stepper = ({
   max,
   step = 1,
   size = 'sm',
+  width = '128px',
   className = '',
+  inputClassName = '',
   style = {},
+  inputStyle = {},
   ...props
 }) => {
   const handleIncrement = () => {
@@ -42,8 +45,15 @@ const Stepper = ({
 
   const iconSize = size === 'sm' ? 12 : size === 'lg' ? 16 : 14
 
+  const containerStyle = {
+    width,
+    minWidth: width,
+    maxWidth: width,
+    ...style
+  }
+
   return (
-    <div className={`flex w-full items-center gap-2 ${className}`} style={style}>
+    <div className={`flex items-center gap-2 ${className}`} style={containerStyle}>
       <input
         type="number"
         value={value}
@@ -51,11 +61,13 @@ const Stepper = ({
         min={min}
         max={max}
         step={step}
-        className="input-outline w-full kol-mono-text hide-number-spinners"
+        className={`input-outline w-full kol-mono-text hide-number-spinners ${inputClassName}`.trim()}
         style={{
           fontSize: size === 'sm' ? '11px' : size === 'lg' ? '14px' : '12px',
           lineHeight: '120%',
-          padding: size === 'sm' ? '6px 16px' : size === 'lg' ? '10px 24px' : '8px 20px'
+          padding: size === 'sm' ? '6px 16px' : size === 'lg' ? '10px 24px' : '8px 20px',
+          width: '100%',
+          ...inputStyle
         }}
         {...props}
       />

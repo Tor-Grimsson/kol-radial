@@ -10,7 +10,8 @@ const WavyCircleCanvas = ({
   onMouseDown,
   onMouseMove,
   onMouseUp,
-  onMouseLeave
+  onMouseLeave,
+  onZoomChange
 }) => {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const isPanningRef = useRef(false)
@@ -19,6 +20,7 @@ const WavyCircleCanvas = ({
   const momentumRef = useRef({ frame: null, lastTime: 0, velocity: { x: 0, y: 0 } })
   const [isDragging, setIsDragging] = useState(false)
   const [spaceActive, setSpaceActive] = useState(false)
+  const containerRef = useRef(null)
 
   const cancelMomentum = () => {
     if (momentumRef.current.frame) {
@@ -161,8 +163,31 @@ const WavyCircleCanvas = ({
     }
   }
 
+  const handleWheel = (event) => {
+    if (event.altKey && onZoomChange) {
+      event.preventDefault()
+      const delta = -event.deltaY * 0.001
+      const newZoom = Math.max(0.5, Math.min(3, params.zoom + delta))
+      onZoomChange(newZoom)
+    }
+  }
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const listener = (e) => {
+      if (e.altKey) {
+        e.preventDefault()
+      }
+    }
+
+    container.addEventListener('wheel', listener, { passive: false })
+    return () => container.removeEventListener('wheel', listener)
+  }, [])
+
   return (
-    <div className="relative flex h-full min-h-0 flex-1 bg-surface-primary lg:order-1">
+    <div ref={containerRef} className="relative flex h-full min-h-0 flex-1 bg-surface-primary lg:order-1" onWheel={handleWheel}>
       {ui.showGrid && (
         <div className="pointer-events-none absolute inset-0 z-0">
           <div
@@ -225,14 +250,14 @@ const WavyCircleCanvas = ({
 
             <g
               id="pathGroup"
-              transform={`translate(${CANVAS_CENTER.x * (1 - params.zoom)}, ${CANVAS_CENTER.y * (1 - params.zoom)}) scale(${params.zoom}) translate(${panOffset.x}, ${panOffset.y})`}
+              transform={`translate(${CANVAS_CENTER.x * (1 - params.zoom * params.scale)}, ${CANVAS_CENTER.y * (1 - params.zoom * params.scale)}) scale(${params.zoom * params.scale}) translate(${panOffset.x}, ${panOffset.y}) rotate(${params.rotate}, ${CANVAS_CENTER.x}, ${CANVAS_CENTER.y})`}
             >
-              <path d={pathData} fill="none" stroke={params.pathColor} strokeWidth={params.strokeWidth} />
+              <path d={pathData} fill={params.fillEnabled ? params.fillColor : "none"} stroke={params.pathEnabled ? params.pathColor : "none"} strokeWidth={params.strokeWidth / params.scale} />
             </g>
 
           <g
             id="handlesGroup"
-            transform={`translate(${CANVAS_CENTER.x * (1 - params.zoom)}, ${CANVAS_CENTER.y * (1 - params.zoom)}) scale(${params.zoom}) translate(${panOffset.x}, ${panOffset.y})`}
+            transform={`translate(${CANVAS_CENTER.x * (1 - params.zoom * params.scale)}, ${CANVAS_CENTER.y * (1 - params.zoom * params.scale)}) scale(${params.zoom * params.scale}) translate(${panOffset.x}, ${panOffset.y}) rotate(${params.rotate}, ${CANVAS_CENTER.x}, ${CANVAS_CENTER.y})`}
           >
             {ui.showHandles &&
               ui.showNodes &&
@@ -284,7 +309,7 @@ const WavyCircleCanvas = ({
 
           <g
             id="nodesGroup"
-            transform={`translate(${CANVAS_CENTER.x * (1 - params.zoom)}, ${CANVAS_CENTER.y * (1 - params.zoom)}) scale(${params.zoom}) translate(${panOffset.x}, ${panOffset.y})`}
+            transform={`translate(${CANVAS_CENTER.x * (1 - params.zoom * params.scale)}, ${CANVAS_CENTER.y * (1 - params.zoom * params.scale)}) scale(${params.zoom * params.scale}) translate(${panOffset.x}, ${panOffset.y}) rotate(${params.rotate}, ${CANVAS_CENTER.x}, ${CANVAS_CENTER.y})`}
           >
             {ui.showNodes &&
               nodes.map((node, index) => (

@@ -1,61 +1,127 @@
 import { useEffect, useRef, useState } from 'react'
 import { SketchPicker } from 'react-color'
-import { Button, Slider, ToggleCheckbox } from '../../components/atoms'
+import { Slider, ToggleCheckbox } from '../../components/atoms'
 
-const shapeOptions = [
-  { value: 'circle', label: 'Circle' },
-  { value: 'triangle', label: 'Triangle' },
-  { value: 'rectangle', label: 'Rectangle' },
-  { value: 'star', label: 'Star' },
-  { value: 'hexagon', label: 'Hexagon' }
+const lfoWaveTypes = [
+  {
+    value: 'sine',
+    icon: (
+      <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M0 6 Q 2.5 0, 5 6 T 10 6 Q 12.5 12, 15 6 T 20 6" />
+      </svg>
+    )
+  },
+  {
+    value: 'triangle',
+    icon: (
+      <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter">
+        <path d="M0 6 L 5 0 L 10 12 L 15 0 L 20 6" />
+      </svg>
+    )
+  },
+  {
+    value: 'square',
+    icon: (
+      <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter">
+        <path d="M0 6 L 0 0 L 5 0 L 5 12 L 10 12 L 10 0 L 15 0 L 15 12 L 20 12" />
+      </svg>
+    )
+  },
+  {
+    value: 'random',
+    icon: (
+      <svg width="20" height="12" viewBox="0 0 20 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="miter">
+        <path d="M0 8 L 4 8 L 4 2 L 8 2 L 8 10 L 12 10 L 12 4 L 16 4 L 16 6 L 20 6" />
+      </svg>
+    )
+  }
 ]
 
 const WavyCircleControls = ({
   params,
   ui,
-  stats,
+  paramRanges,
   onParamChange,
   onUiToggle,
-  onExportSvg,
-  onCopyPath
+  onToggleAnimateParam,
+  animationIntensities
 }) => {
-  const [showPicker, setShowPicker] = useState(false)
-  const pickerRef = useRef(null)
+  const [showPathPicker, setShowPathPicker] = useState(false)
+  const [showFillPicker, setShowFillPicker] = useState(false)
+  const pathPickerRef = useRef(null)
+  const fillPickerRef = useRef(null)
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showPicker && pickerRef.current && !pickerRef.current.contains(event.target)) {
-        setShowPicker(false)
+      if (showPathPicker && pathPickerRef.current && !pathPickerRef.current.contains(event.target)) {
+        setShowPathPicker(false)
+      }
+      if (showFillPicker && fillPickerRef.current && !fillPickerRef.current.contains(event.target)) {
+        setShowFillPicker(false)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showPicker])
+  }, [showPathPicker, showFillPicker])
 
   return (
-    <aside className="flex w-[360px] flex-col gap-8 p-6 border-l border-auto bg-fg-02">
-      <section className="flex flex-col gap-4">
-        <h2 className="control-heading">Wave Parameters</h2>
+    <aside className="flex w-[400px] flex-col gap-8 p-6 rounded border border-auto" style={{ backgroundColor: '#121215' }}>
+      <section className="flex flex-col gap-2">
+        <h2 className="control-heading">WAVE PARAMETERS</h2>
         <Slider
           label="Radius"
-          min={50}
-          max={200}
+          min={paramRanges.radius.min}
+          max={paramRanges.radius.max}
           value={params.radius}
           step={1}
           onChange={(value) => onParamChange('radius', value)}
           variant="minimal"
           className="w-full"
+          animateState={ui.animatedParams.includes('radius') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('radius') : null}
+          animateIntensity={animationIntensities.radius || 0}
         />
         <Slider
-          label="Amplitude (±)"
-          min={-50}
-          max={50}
+          label="Amplitude"
+          min={paramRanges.amplitude.min}
+          max={paramRanges.amplitude.max}
           value={params.amplitude}
           step={1}
           onChange={(value) => onParamChange('amplitude', value)}
           variant="minimal"
           className="w-full"
+          animateState={ui.animatedParams.includes('amplitude') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('amplitude') : null}
+          animateIntensity={animationIntensities.amplitude || 0}
+        />
+        <Slider
+          label="Scale"
+          min={0.1}
+          max={2}
+          step={0.1}
+          value={params.scale}
+          onChange={(value) => onParamChange('scale', value)}
+          variant="minimal"
+          className="w-full"
+          formatValue={(value) => `${value.toFixed(1)}×`}
+          animateState={ui.animatedParams.includes('scale') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('scale') : null}
+          animateIntensity={animationIntensities.scale || 0}
+        />
+        <Slider
+          label="Rotate"
+          min={0}
+          max={360}
+          step={1}
+          value={params.rotate}
+          onChange={(value) => onParamChange('rotate', value)}
+          variant="minimal"
+          className="w-full"
+          formatValue={(value) => `${value}°`}
+          animateState={ui.animatedParams.includes('rotate') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('rotate') : null}
+          animateIntensity={animationIntensities.rotate || 0}
         />
         <Slider
           label="Frequency"
@@ -66,7 +132,87 @@ const WavyCircleControls = ({
           onChange={(value) => onParamChange('frequency', value)}
           variant="minimal"
           className="w-full"
+          animateState={ui.animatedParams.includes('frequency') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('frequency') : null}
+          animateIntensity={animationIntensities.frequency || 0}
         />
+        <Slider
+          label="Resolution"
+          min={1}
+          max={16}
+          value={params.resolution}
+          step={1}
+          onChange={(value) => onParamChange('resolution', value)}
+          variant="minimal"
+          className="w-full"
+          animateState={ui.animatedParams.includes('resolution') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('resolution') : null}
+          animateIntensity={animationIntensities.resolution || 0}
+        />
+        <Slider
+          label="LFO Amount"
+          min={0}
+          max={10}
+          value={params.lfoAmount}
+          step={0.1}
+          onChange={(value) => onParamChange('lfoAmount', value)}
+          variant="minimal"
+          className="w-full"
+          animateState={ui.animatedParams.includes('lfoAmount') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('lfoAmount') : null}
+          animateIntensity={animationIntensities.lfoAmount || 0}
+        />
+        <Slider
+          label="LFO Frequency"
+          min={1}
+          max={12}
+          value={params.lfoFrequency}
+          step={params.lfoSync ? 1 : 0.1}
+          onChange={(value) => onParamChange('lfoFrequency', value)}
+          variant="minimal"
+          className="w-full"
+          animateState={ui.animatedParams.includes('lfoFrequency') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('lfoFrequency') : null}
+          animateIntensity={animationIntensities.lfoFrequency || 0}
+        />
+        <div className="flex flex-row justify-between items-start my-2">
+          <ToggleCheckbox
+            label={<span className="kol-mono-xs tracking-[0.08em]">Sync</span>}
+            checked={params.lfoSync}
+            onChange={(next) => onParamChange('lfoSync', next)}
+          />
+          <div className="flex flex-col gap-3">
+            <ToggleCheckbox
+              label={<span className="kol-mono-xs tracking-[0.08em]">Sym X</span>}
+              checked={params.lfoSymmetryX}
+              onChange={(next) => onParamChange('lfoSymmetryX', next)}
+            />
+            <ToggleCheckbox
+              label={<span className="kol-mono-xs tracking-[0.08em]">Sym Y</span>}
+              checked={params.lfoSymmetryY}
+              onChange={(next) => onParamChange('lfoSymmetryY', next)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {lfoWaveTypes.map((type) => {
+              const isActive = params.lfoWaveType === type.value
+              return (
+                <button
+                  type="button"
+                  key={type.value}
+                  onClick={() => onParamChange('lfoWaveType', type.value)}
+                  className={`rounded border px-2 py-1 transition flex items-center justify-center ${
+                    isActive
+                      ? 'border-auto bg-[var(--kol-surface-on-primary)] text-[var(--kol-surface-primary)]'
+                      : 'border-auto text-[var(--kol-surface-on-primary)] hover:border-[var(--kol-border-strong)]'
+                  }`}
+                >
+                  {type.icon}
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <Slider
           label="Zoom"
           min={0.5}
@@ -77,6 +223,9 @@ const WavyCircleControls = ({
           variant="minimal"
           className="w-full"
           formatValue={(value) => `${value.toFixed(1)}×`}
+          animateState={ui.animatedParams.includes('zoom') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('zoom') : null}
+          animateIntensity={animationIntensities.zoom || 0}
         />
         <Slider
           label="Stroke Width"
@@ -88,12 +237,15 @@ const WavyCircleControls = ({
           variant="minimal"
           className="w-full"
           formatValue={(value) => `${value.toFixed(1)}px`}
+          animateState={ui.animatedParams.includes('strokeWidth') ? (ui.animate ? 'active' : 'inactive') : 'none'}
+          onToggleAnimate={ui.animate ? () => onToggleAnimateParam('strokeWidth') : null}
+          animateIntensity={animationIntensities.strokeWidth || 0}
         />
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="control-heading">Visualization</h2>
-        <div className="flex flex-wrap items-center gap-4">
+        <h2 className="control-heading">VISUALIZATION</h2>
+        <div className="grid grid-cols-3 gap-4">
           <ToggleCheckbox
             label={<span className="kol-mono-text-xs tracking-[0.08em]">Grid</span>}
             checked={ui.showGrid}
@@ -109,48 +261,101 @@ const WavyCircleControls = ({
             checked={ui.showHandles}
             onChange={(next) => onUiToggle('showHandles', next)}
           />
+          <ToggleCheckbox
+            label={<span className="kol-mono-text-xs tracking-[0.08em]">Mirror X</span>}
+            checked={params.mirrorX}
+            onChange={(next) => onParamChange('mirrorX', next)}
+          />
+          <ToggleCheckbox
+            label={<span className="kol-mono-text-xs tracking-[0.08em]">Mirror Y</span>}
+            checked={params.mirrorY}
+            onChange={(next) => onParamChange('mirrorY', next)}
+          />
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
-        <div className="control-heading">Editing</div>
-        <div className="flex flex-wrap items-center gap-3">
+        <h2 className="control-heading">SYMMETRICAL EDITING</h2>
+        <div className="grid grid-cols-3 gap-3">
           <ToggleCheckbox
-            label={<span className="kol-mono-xs tracking-[0.08em]">Symmetric Editing</span>}
+            label={<span className="kol-mono-xs tracking-[0.08em]">On</span>}
             checked={ui.symmetricEdit}
             onChange={(next) => onUiToggle('symmetricEdit', next)}
           />
           <ToggleCheckbox
-            label={<span className="kol-mono-xs tracking-[0.08em]">Symmetrical Handles</span>}
+            label={<span className="kol-mono-xs tracking-[0.08em]">Handles</span>}
             checked={ui.symmetricalBezier}
             onChange={(next) => onUiToggle('symmetricalBezier', next)}
+          />
+          <ToggleCheckbox
+            label={<span className="kol-mono-xs tracking-[0.08em]">Corners</span>}
+            checked={ui.smoothCorners}
+            onChange={(next) => onUiToggle('smoothCorners', next)}
           />
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="control-heading">Appearance</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="control-heading">ANIMATION</h2>
+        <div className="flex items-center gap-3">
+          <ToggleCheckbox
+            label={<span className="kol-mono-xs tracking-[0.08em]">On</span>}
+            checked={ui.animate}
+            onChange={(next) => onUiToggle('animate', next)}
+          />
+          <Slider
+            label="Speed"
+            min={0.1}
+            max={5}
+            step={0.1}
+            value={ui.animateSpeed}
+            onChange={(value) => onUiToggle('animateSpeed', value)}
+            variant="minimal"
+            className="flex-1"
+            formatValue={(value) => `${value.toFixed(1)}×`}
+          />
+        </div>
+      </section>
 
-        <div className="flex flex-col gap-3 relative" ref={pickerRef}>
-          <label className="control-label">Path Color</label>
+      <section className="flex items-start gap-8">
+        <div className="flex flex-col gap-3 relative flex-1" ref={pathPickerRef}>
+          <h2 className="control-heading">PATH COLOR</h2>
           <button
             type="button"
-            className="flex items-center gap-3 rounded border border-auto bg-[var(--kol-surface-primary)] px-3 py-2 text-left"
-            onClick={() => setShowPicker((prev) => !prev)}
+            className="flex items-center gap-2 text-left"
+            onClick={(e) => {
+              if (e.altKey) {
+                onParamChange('pathEnabled', !params.pathEnabled)
+              } else {
+                setShowPathPicker((prev) => !prev)
+              }
+            }}
             aria-haspopup="dialog"
-            aria-expanded={showPicker}
+            aria-expanded={showPathPicker}
           >
             <span
-              className="h-6 w-6 rounded-full border border-auto"
+              className="h-8 w-8 rounded-full border border-auto relative overflow-hidden"
               style={{ backgroundColor: params.pathColor }}
-            />
-            <span className="kol-mono-text-xs">{params.pathColor}</span>
+            >
+              {!params.pathEnabled && (
+                <span
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(to top right, transparent calc(50% - 1px), #ef4444 calc(50% - 1px), #ef4444 calc(50% + 1px), transparent calc(50% + 1px))'
+                  }}
+                />
+              )}
+            </span>
+            <span className="kol-mono-xs">
+              {params.pathColor.startsWith('rgba')
+                ? '#' + params.pathColor.match(/\d+/g).slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('')
+                : params.pathColor}
+            </span>
           </button>
-          {showPicker && (
-            <div className="absolute left-0 z-20 mt-2">
+          {showPathPicker && (
+            <div className="absolute left-0 bottom-full z-20 mb-2">
               <SketchPicker
                 color={params.pathColor}
-                disableAlpha
                 presetColors={[]}
                 styles={{
                   default: {
@@ -162,60 +367,73 @@ const WavyCircleControls = ({
                     },
                   },
                 }}
-                onChange={(color) => onParamChange('pathColor', color.hex)}
+                onChange={(color) => {
+                  const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a})`
+                  onParamChange('pathColor', rgba)
+                }}
                 className="sketch-only-spectrum"
               />
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-3">
-          <label className="control-label">Base Shape</label>
-          <div className="flex flex-wrap gap-2">
-            {shapeOptions.map((option) => {
-              const isActive = params.shape === option.value
-              return (
-                <button
-                  type="button"
-                  key={option.value}
-                  onClick={() => onParamChange('shape', option.value)}
-                  className={`kol-mono-xs rounded-full border px-3 py-1 transition ${
-                    isActive
-                      ? 'border-[var(--kol-accent-primary)] bg-[var(--kol-accent-primary)] text-[var(--kol-surface-primary)]'
-                      : 'border-auto text-[var(--kol-surface-on-primary)] hover:border-[var(--kol-border-strong)]'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="control-heading">Statistics</h2>
-        <div className="kol-mono-xs flex flex-col gap-1 rounded border border-auto bg-[var(--kol-container-primary)] p-3">
-          <div>
-            <span className="kol-mono-xs uppercase tracking-[0.06em]">Nodes:</span> {stats.nodeCount}
-          </div>
-          <div>
-            <span className="kol-mono-xs uppercase tracking-[0.06em]">Control Points:</span> {stats.handleCount}
-          </div>
-          <div>
-            <span className="kol-mono-xs uppercase tracking-[0.06em]">Optimality:</span> {stats.optimality}
-          </div>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm" onClick={onExportSvg}>
-            Download SVG
-          </Button>
-          <Button variant="outline" size="sm" onClick={onCopyPath}>
-            Copy Path
-          </Button>
+        <div className="flex flex-col gap-3 relative flex-1" ref={fillPickerRef}>
+          <h2 className="control-heading">FILL COLOR</h2>
+          <button
+            type="button"
+            className="flex items-center gap-2 text-left"
+            onClick={(e) => {
+              if (e.altKey) {
+                onParamChange('fillEnabled', !params.fillEnabled)
+              } else {
+                setShowFillPicker((prev) => !prev)
+              }
+            }}
+            aria-haspopup="dialog"
+            aria-expanded={showFillPicker}
+          >
+            <span
+              className="h-8 w-8 rounded-full border border-auto relative overflow-hidden"
+              style={{ backgroundColor: params.fillColor }}
+            >
+              {!params.fillEnabled && (
+                <span
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(to top right, transparent calc(50% - 1px), #ef4444 calc(50% - 1px), #ef4444 calc(50% + 1px), transparent calc(50% + 1px))'
+                  }}
+                />
+              )}
+            </span>
+            <span className="kol-mono-xs">
+              {params.fillColor.startsWith('rgba')
+                ? '#' + params.fillColor.match(/\d+/g).slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('')
+                : params.fillColor}
+            </span>
+          </button>
+          {showFillPicker && (
+            <div className="absolute left-0 bottom-full z-20 mb-2">
+              <SketchPicker
+                color={params.fillColor}
+                presetColors={[]}
+                styles={{
+                  default: {
+                    picker: {
+                      boxShadow: '0 16px 40px rgba(0, 0, 0, 0.4)',
+                      borderRadius: '12px',
+                      padding: '10px',
+                      background: 'var(--kol-surface-primary)',
+                    },
+                  },
+                }}
+                onChange={(color) => {
+                  const rgba = `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, ${color.rgb.a})`
+                  onParamChange('fillColor', rgba)
+                }}
+                className="sketch-only-spectrum"
+              />
+            </div>
+          )}
         </div>
       </section>
     </aside>

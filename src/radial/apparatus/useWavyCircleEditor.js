@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
   CANVAS_CENTER,
   CANVAS_SIZE,
@@ -7,6 +7,7 @@ import {
   defaultUI,
   generatePathFromNodes,
   getSymmetricSiblings,
+  shapePresets,
   smoothDragScale
 } from './wavyCircleMath'
 
@@ -26,7 +27,7 @@ export const useWavyCircleEditor = () => {
     }
   }, [params, ui.symmetricEdit])
 
-  const pathData = useMemo(() => generatePathFromNodes(nodes), [nodes])
+  const pathData = useMemo(() => generatePathFromNodes(nodes, ui.smoothCorners), [nodes, ui.smoothCorners])
 
   const stats = {
     nodeCount: nodes.length,
@@ -35,12 +36,53 @@ export const useWavyCircleEditor = () => {
   }
 
   const handleParamChange = (key, value) => {
-    setParams((prev) => ({ ...prev, [key]: value }))
+    if (key === 'shape' && shapePresets[value]) {
+      const preset = shapePresets[value]
+      setParams({
+        ...defaultParams,
+        shape: value,
+        radius: preset.radius,
+        amplitude: preset.amplitude,
+        frequency: preset.frequency,
+        resolution: preset.resolution !== undefined ? preset.resolution : defaultParams.resolution,
+        scale: preset.scale,
+        rotate: preset.rotate !== undefined ? preset.rotate : defaultParams.rotate
+      })
+    } else {
+      setParams((prev) => ({ ...prev, [key]: value }))
+      // Update animation offset when user manually changes an animated parameter
+      if (ui.animatedParams.includes(key)) {
+        animationOffsetsRef.current[key] = value
+      }
+    }
   }
+
+  const paramRanges = useMemo(() => {
+    const preset = shapePresets[params.shape]
+    if (preset) {
+      return preset.ranges
+    }
+    return {
+      radius: { min: 50, max: 200 },
+      amplitude: { min: -50, max: 50 }
+    }
+  }, [params.shape])
 
   const handleUiToggle = (key, value) => {
     setUi((prev) => ({ ...prev, [key]: value }))
   }
+
+  const toggleAnimateParam = useCallback((paramName) => {
+    setUi((prev) => {
+      const isAnimated = prev.animatedParams.includes(paramName)
+      return {
+        ...prev,
+        animatedParams: isAnimated
+          ? prev.animatedParams.filter(p => p !== paramName)
+          : [...prev.animatedParams, paramName]
+      }
+    })
+  }, [])
 
   const handleMouseDown = (event) => {
     if (!ui.symmetricEdit) return
@@ -151,6 +193,106 @@ export const useWavyCircleEditor = () => {
     }
   }
 
+  // Track animation intensities for visual feedback
+  const [animationIntensities, setAnimationIntensities] = useState({})
+  const animationOffsetsRef = useRef({})
+
+  // Animation loop
+  useEffect(() => {
+    if (!ui.animate || ui.animatedParams.length === 0) return
+
+    const animationStartTime = performance.now()
+    let animationFrame
+
+    const animate = (currentTime) => {
+      const elapsed = (currentTime - animationStartTime) / 1000 // convert to seconds
+      const speed = ui.animateSpeed
+      const newIntensities = {}
+
+      setParams((prev) => {
+        const updates = { ...prev }
+
+        if (ui.animatedParams.includes('radius')) {
+          const range = paramRanges.radius
+          const offset = animationOffsetsRef.current.radius ?? ((range.min + range.max) / 2)
+          const amplitude = (range.max - range.min) / 4
+          updates.radius = offset + Math.sin(elapsed * speed * 0.4) * amplitude
+          newIntensities.radius = Math.abs(Math.sin(elapsed * speed * 0.4))
+        }
+
+        if (ui.animatedParams.includes('amplitude')) {
+          const range = paramRanges.amplitude
+          const offset = animationOffsetsRef.current.amplitude ?? ((range.min + range.max) / 2)
+          const amp = (range.max - range.min) / 4
+          updates.amplitude = offset + Math.sin(elapsed * speed * 0.3) * amp
+          newIntensities.amplitude = Math.abs(Math.sin(elapsed * speed * 0.3))
+        }
+
+        if (ui.animatedParams.includes('scale')) {
+          const offset = animationOffsetsRef.current.scale ?? 1
+          updates.scale = offset + Math.sin(elapsed * speed * 0.5) * 0.3
+          newIntensities.scale = Math.abs(Math.sin(elapsed * speed * 0.5))
+        }
+
+        if (ui.animatedParams.includes('rotate')) {
+          const startRotate = animationOffsetsRef.current.rotate ?? 0
+          updates.rotate = (startRotate + speed * elapsed * 30) % 360
+          newIntensities.rotate = Math.abs(Math.sin(elapsed * speed * 2)) // fast pulse
+        }
+
+        if (ui.animatedParams.includes('frequency')) {
+          const offset = animationOffsetsRef.current.frequency ?? 6
+          updates.frequency = Math.round(offset + Math.sin(elapsed * speed * 0.2) * 3)
+          newIntensities.frequency = Math.abs(Math.sin(elapsed * speed * 0.2))
+        }
+
+        if (ui.animatedParams.includes('resolution')) {
+          const offset = animationOffsetsRef.current.resolution ?? 8
+          updates.resolution = Math.round(offset + Math.sin(elapsed * speed * 0.25) * 4)
+          newIntensities.resolution = Math.abs(Math.sin(elapsed * speed * 0.25))
+        }
+
+        if (ui.animatedParams.includes('lfoAmount')) {
+          const offset = animationOffsetsRef.current.lfoAmount ?? 5
+          updates.lfoAmount = offset + Math.sin(elapsed * speed * 0.5) * 5
+          newIntensities.lfoAmount = Math.abs(Math.sin(elapsed * speed * 0.5))
+        }
+
+        if (ui.animatedParams.includes('lfoFrequency')) {
+          const offset = animationOffsetsRef.current.lfoFrequency ?? 6
+          updates.lfoFrequency = offset + Math.sin(elapsed * speed * 0.3) * 3
+          newIntensities.lfoFrequency = Math.abs(Math.sin(elapsed * speed * 0.3))
+        }
+
+        if (ui.animatedParams.includes('zoom')) {
+          const offset = animationOffsetsRef.current.zoom ?? 1
+          updates.zoom = offset + Math.sin(elapsed * speed * 0.3) * 0.2
+          newIntensities.zoom = Math.abs(Math.sin(elapsed * speed * 0.3))
+        }
+
+        if (ui.animatedParams.includes('strokeWidth')) {
+          const offset = animationOffsetsRef.current.strokeWidth ?? 2
+          updates.strokeWidth = offset + Math.sin(elapsed * speed * 0.4) * 1
+          newIntensities.strokeWidth = Math.abs(Math.sin(elapsed * speed * 0.4))
+        }
+
+        return updates
+      })
+
+      setAnimationIntensities(newIntensities)
+      animationFrame = requestAnimationFrame(animate)
+    }
+
+    animationFrame = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame)
+      }
+      setAnimationIntensities({})
+    }
+  }, [ui.animate, ui.animateSpeed, ui.animatedParams, paramRanges])
+
   return {
     params,
     ui,
@@ -158,8 +300,11 @@ export const useWavyCircleEditor = () => {
     pathData,
     stats,
     svgRef,
+    paramRanges,
     handleParamChange,
     handleUiToggle,
+    toggleAnimateParam,
+    animationIntensities,
     handleMouseDown,
     handleMouseMove,
     resetDrag,

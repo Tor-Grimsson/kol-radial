@@ -5,10 +5,81 @@ export const defaultParams = {
   radius: 120,
   amplitude: 25,
   frequency: 5,
+  resolution: 4,
+  lfoAmount: 0,
+  lfoFrequency: 2,
+  lfoSync: false,
+  lfoSymmetryX: false,
+  lfoSymmetryY: false,
+  lfoWaveType: 'sine',
+  mirrorX: false,
+  mirrorY: false,
+  scale: 1,
   zoom: 1,
+  rotate: 0,
   strokeWidth: 2,
   pathColor: '#ffffff',
+  pathEnabled: true,
+  fillColor: '#ffffff',
+  fillEnabled: false,
   shape: 'circle'
+}
+
+export const shapePresets = {
+  circle: {
+    radius: 120,
+    amplitude: 25,
+    frequency: 5,
+    scale: 1,
+    ranges: {
+      radius: { min: 50, max: 200 },
+      amplitude: { min: -50, max: 50 }
+    }
+  },
+  rectangle: {
+    radius: 128,
+    amplitude: 20,
+    frequency: 4,
+    resolution: 8,
+    scale: 1,
+    rotate: 22,
+    ranges: {
+      radius: { min: 80, max: 200 },
+      amplitude: { min: -50, max: 50 }
+    }
+  },
+  triangle: {
+    radius: 200,
+    amplitude: 100,
+    frequency: 3,
+    scale: 0.7,
+    ranges: {
+      radius: { min: 100, max: 300 },
+      amplitude: { min: 50, max: 150 }
+    }
+  },
+  star: {
+    radius: 160,
+    amplitude: 70,
+    frequency: 8,
+    scale: 1,
+    ranges: {
+      radius: { min: 100, max: 250 },
+      amplitude: { min: 40, max: 100 }
+    }
+  },
+  hexagon: {
+    radius: 200,
+    amplitude: 15,
+    frequency: 6,
+    resolution: 8,
+    scale: 0.8,
+    rotate: 15,
+    ranges: {
+      radius: { min: 120, max: 280 },
+      amplitude: { min: -30, max: 40 }
+    }
+  }
 }
 
 export const defaultUI = {
@@ -16,72 +87,76 @@ export const defaultUI = {
   showNodes: true,
   showHandles: true,
   symmetricEdit: false,
-  symmetricalBezier: true
+  symmetricalBezier: true,
+  smoothCorners: true,
+  animate: false,
+  animateSpeed: 1,
+  animatedParams: []
 }
 
 export const smoothDragScale = 0.01
 
-const shapeProfiles = {
-  circle: () => 0,
-  triangle: (theta) => Math.cos(3 * theta),
-  rectangle: (theta) => Math.cos(4 * theta),
-  star: (theta) => Math.cos(5 * theta),
-  hexagon: (theta) => Math.cos(6 * theta)
-}
-
-const shapeBiases = {
-  circle: 0,
-  triangle: 0.18,
-  rectangle: 0.2,
-  star: 0.25,
-  hexagon: 0.22
-}
-
-const polygonRadius = (theta, radius, sides) => {
-  const segment = (2 * Math.PI) / sides
-  const halfSegment = segment / 2
-  const adjusted = ((theta + halfSegment) % segment) - halfSegment
-  const denom = Math.cos(adjusted)
-  const safeDenom = Math.max(denom, 0.01)
-  return radius * Math.cos(halfSegment) / safeDenom
-}
-
-const starRadius = (theta, radius) => {
-  const spikes = 5
-  const segment = (2 * Math.PI) / (spikes * 2)
-  const offset = ((theta + segment / 2) % (2 * segment))
-  const index = Math.floor(offset / segment)
-  const innerRadius = radius * 0.4
-  const start = index % 2 === 0 ? radius : innerRadius
-  const end = (index + 1) % 2 === 0 ? radius : innerRadius
-  const t = ((offset % segment) + segment) % segment / segment
-  return start + (end - start) * t
-}
-
-const getShapeRadius = (theta, radius, shape) => {
-  switch (shape) {
+const getLfoValue = (phase, waveType) => {
+  switch (waveType) {
+    case 'sine':
+      return Math.sin(phase)
     case 'triangle':
-      return polygonRadius(theta, radius, 3)
-    case 'rectangle':
-      return polygonRadius(theta, radius, 4)
-    case 'hexagon':
-      return polygonRadius(theta, radius, 6)
-    case 'star':
-      return starRadius(theta, radius)
+      return (2 / Math.PI) * Math.asin(Math.sin(phase))
+    case 'square':
+      return Math.sin(phase) >= 0 ? 1 : -1
+    case 'random':
+      // Use phase as seed for consistent random values
+      const seed = Math.floor(phase / (Math.PI / 4))
+      return (Math.sin(seed * 12.9898 + seed * 78.233) * 43758.5453) % 2 - 1
     default:
-      return radius
+      return Math.sin(phase)
   }
 }
 
-export const calculateOptimalNodes = ({ radius, amplitude, frequency, shape }) => {
-  const totalNodes = frequency * 4
+export const calculateOptimalNodes = ({ radius, amplitude, frequency, resolution, lfoAmount, lfoFrequency, lfoSync, lfoSymmetryX, lfoSymmetryY, lfoWaveType, mirrorX, mirrorY, shape }) => {
+  const totalNodes = frequency * resolution
   const generatedNodes = []
+
+  // When sync is enabled, snap LFO frequency to ratios of main frequency
+  const syncedLfoFreq = lfoSync ? Math.round(lfoFrequency) : lfoFrequency
 
   for (let index = 0; index < totalNodes; index += 1) {
     const theta = (index / totalNodes) * Math.PI * 2
-    const wavePhase = frequency * theta
-    const shapeRadius = getShapeRadius(theta, radius, shape)
-    const r = shapeRadius + amplitude * Math.sin(wavePhase)
+
+    // Apply symmetry by using absolute values of sin/cos for X/Y
+    let lfoPhase = syncedLfoFreq * theta
+    if (lfoSymmetryX || lfoSymmetryY) {
+      const x = Math.cos(theta)
+      const y = Math.sin(theta)
+      const symX = lfoSymmetryX ? Math.abs(x) : x
+      const symY = lfoSymmetryY ? Math.abs(y) : y
+      const symTheta = Math.atan2(symY, symX)
+      lfoPhase = syncedLfoFreq * symTheta
+    }
+
+    const lfoValue = getLfoValue(lfoPhase, lfoWaveType)
+    const frequencyMod = frequency + lfoAmount * lfoValue
+
+    // Apply mirror symmetry to the wave calculation
+    let mirrorTheta = theta
+    if (mirrorX && mirrorY) {
+      // Both axes: 4-way symmetry
+      const quadrant = Math.floor((theta / (Math.PI / 2)) % 4)
+      const baseTheta = theta % (Math.PI / 2)
+      mirrorTheta = quadrant % 2 === 0 ? baseTheta : (Math.PI / 2) - baseTheta
+    } else if (mirrorX) {
+      // X-axis symmetry: mirror left/right
+      const half = Math.floor((theta / Math.PI) % 2)
+      const baseTheta = theta % Math.PI
+      mirrorTheta = half === 0 ? baseTheta : (Math.PI * 2) - baseTheta
+    } else if (mirrorY) {
+      // Y-axis symmetry: mirror top/bottom
+      const half = Math.floor((theta / Math.PI) % 2)
+      mirrorTheta = half === 0 ? theta : (Math.PI * 2) - theta
+    }
+
+    const wavePhase = frequencyMod * mirrorTheta
+    const r = radius + amplitude * Math.sin(wavePhase)
     const x = CANVAS_CENTER.x + r * Math.cos(theta)
     const y = CANVAS_CENTER.y + r * Math.sin(theta)
 
@@ -114,15 +189,22 @@ export const calculateOptimalNodes = ({ radius, amplitude, frequency, shape }) =
   return generatedNodes
 }
 
-export const generatePathFromNodes = (nodeList) => {
+export const generatePathFromNodes = (nodeList, smoothCorners = true) => {
   if (!nodeList.length) return ''
 
   let pathString = `M ${nodeList[0].x} ${nodeList[0].y}`
 
-  for (let index = 0; index < nodeList.length; index += 1) {
-    const current = nodeList[index]
-    const next = nodeList[(index + 1) % nodeList.length]
-    pathString += ` C ${current.handle2.x} ${current.handle2.y}, ${next.handle1.x} ${next.handle1.y}, ${next.x} ${next.y}`
+  if (smoothCorners) {
+    for (let index = 0; index < nodeList.length; index += 1) {
+      const current = nodeList[index]
+      const next = nodeList[(index + 1) % nodeList.length]
+      pathString += ` C ${current.handle2.x} ${current.handle2.y}, ${next.handle1.x} ${next.handle1.y}, ${next.x} ${next.y}`
+    }
+  } else {
+    for (let index = 0; index < nodeList.length; index += 1) {
+      const next = nodeList[(index + 1) % nodeList.length]
+      pathString += ` L ${next.x} ${next.y}`
+    }
   }
 
   return pathString
